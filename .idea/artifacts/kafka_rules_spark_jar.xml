@@ -66,6 +66,7 @@
       <element id="extracted-dir" path="$USER_HOME$/.ivy2/cache/org.apache.spark/spark-streaming_2.11/jars/spark-streaming_2.11-2.1.1.jar" path-in-jar="/" />
       <element id="extracted-dir" path="$USER_HOME$/.ivy2/cache/com.trueaccord.scalapb/scalapb-runtime_2.11/jars/scalapb-runtime_2.11-0.6.0-pre5.jar" path-in-jar="/" />
       <element id="extracted-dir" path="$USER_HOME$/.ivy2/cache/com.trueaccord.lenses/lenses_2.11/jars/lenses_2.11-0.4.12.jar" path-in-jar="/" />
+      <element id="extracted-dir" path="$USER_HOME$/.ivy2/cache/org.apache.kudu/kudu-spark2_2.11/jars/kudu-spark2_2.11-1.2.0.jar" path-in-jar="/" />
     </root>
   </artifact>
 </component>

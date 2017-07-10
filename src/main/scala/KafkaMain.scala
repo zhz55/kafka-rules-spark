@@ -16,7 +16,7 @@ object KafkaMain {
 
   def main(args: Array[String]): Unit = {
     val conf = new SparkConf().setAppName("KafkaTest").setMaster("yarn")
-    val ssc = new StreamingContext(conf, Seconds(5))
+    val ssc = new StreamingContext(conf, Seconds(10))
 
     val kafkaParams = Map[String, Object](
       "bootstrap.servers" -> "kf01:9092,kf02:9092,kf03:9092,kf04:9092,kf05:9092",

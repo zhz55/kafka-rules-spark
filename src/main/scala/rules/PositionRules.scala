@@ -5,6 +5,8 @@ package rules
   */
 
 import java.text.{ParseException, SimpleDateFormat}
+import java.util.Calendar
+import java.util.Date
 
 import scala.collection._
 import ctitc.seagoing.SEAGOING._
@@ -97,19 +99,19 @@ class PositionRules() extends Serializable{
   def positionJudge(vehiclePosition: VehiclePosition) : Any = {
     val stringBuilder = new StringBuilder
     // 1001
-    if((10 < vehiclePosition.vehicleNo.length()) || (vehiclePosition.vehicleNo.length() < 6)) stringBuilder.append("1")
+    if((10 < vehiclePosition.vehicleNo.trim().length()) || (vehiclePosition.vehicleNo.trim().length() < 6)) stringBuilder.append("1")
     else stringBuilder.append("0")
 
-    if(vehiclePosition.vehicleNo.length() > 0) {
+    if(vehiclePosition.vehicleNo.trim().length() > 0) {
       // 1002
-      if(provHashMap.get(vehiclePosition.accessCode) == null || !provSet.contains(vehiclePosition.vehicleNo.substring(0, 1))) {
+      if(provHashMap.get(vehiclePosition.accessCode) == null || !provSet.contains(vehiclePosition.vehicleNo.trim().substring(0, 1))) {
         stringBuilder.append("1")
       } else {
         stringBuilder.append("0")
       }
 
       // 1003
-      if(!"^[A-Z]+[A-Z0-9]+[A-Z0-9挂学]$".r.pattern.matcher(vehiclePosition.vehicleNo.substring(1).toUpperCase()).matches()) {
+      if(!"^[A-Z]+[A-Z0-9]+[A-Z0-9挂学]$".r.pattern.matcher(vehiclePosition.vehicleNo.trim().substring(1).toUpperCase()).matches()) {
         stringBuilder.append("1")
       } else stringBuilder.append("0")
     } else {
@@ -148,7 +150,8 @@ class PositionRules() extends Serializable{
         stringBuilder.append("0")
 
         // 1602
-        if(vehiclePosition.updateTime >= pTime) stringBuilder.append("0")
+        // ignore over 8 days position data
+        if((vehiclePosition.updateTime >= pTime) && (vehiclePosition.updateTime - pTime <= 691200)) stringBuilder.append("0")
         else stringBuilder.append("1")
 
       } else {
@@ -161,5 +164,75 @@ class PositionRules() extends Serializable{
         stringBuilder.append("1")
       }
     }
+  }
+
+  private def getTableNum(int: Int) : Int = {
+    int match  {
+      case i if i < 9 => 1
+      case i if (i > 8) && (i < 17) => 2
+      case i if (i > 16) && (i < 25) => 3
+      case i if i > 24 => 4
+    }
+  }
+
+  def tableArray() : Array[String] = {
+    //"impala::position.CTTIC_VehiclePosition_201707_err_test"
+    // tableArray[0] : correctNowTableName
+    // tableArray[1] : errNowTableName
+    // tableArray[2] : correctAcrossTableName
+    // tableArray[3] : errorAcrossTableName
+    val tableArray = new Array[String](4)
+
+    val now = Calendar.getInstance()
+
+    val tableNum = getTableNum(now.get(Calendar.DAY_OF_MONTH))
+
+    def monthAddZero(int: Int) : String = {
+      if(int < 10) "0" + int.toString
+      else int.toString
+    }
+
+    tableArray(0) = "impala::position.CTTIC_VehiclePosition_" + now.get(Calendar.YEAR).toString +
+      monthAddZero(now.get(Calendar.MONTH) + 1) + "_" + tableNum.toString + "_test"
+    tableArray(1) = "impala::position.CTTIC_VehiclePosition_" + now.get(Calendar.YEAR).toString +
+      monthAddZero(now.get(Calendar.MONTH) + 1) + "_err_test"
+
+    // across table
+    // across month
+    if(tableNum == 1) {
+      now.add(Calendar.MONTH, -1)
+      tableArray(2) = "impala::position.CTTIC_VehiclePosition_" + now.get(Calendar.YEAR).toString +
+        monthAddZero(now.get(Calendar.MONTH) + 1) + "_4_test"
+      tableArray(3) = "impala::position.CTTIC_VehiclePosition_" + now.get(Calendar.YEAR).toString +
+        monthAddZero(now.get(Calendar.MONTH) + 1) + "_err_test"
+    } else {
+      tableArray(2) = "impala::position.CTTIC_VehiclePosition_" + now.get(Calendar.YEAR).toString +
+        monthAddZero(now.get(Calendar.MONTH) + 1) + "_" + (tableNum - 1).toString + "_test"
+      tableArray(3) = tableArray(1)
+    }
+
+    tableArray
+  }
+
+  def correctCrossTableFlag(long: Long) : Boolean = {
+    val calendar = Calendar.getInstance()
+
+    val tableNum = getTableNum(calendar.get(Calendar.DAY_OF_MONTH))
+
+    calendar.setTime(new Date(long))
+
+    if(tableNum == getTableNum(calendar.get(Calendar.DAY_OF_MONTH))) false
+    else true
+  }
+
+  def errorCrossTableFlag(long: Long) : Boolean = {
+    val calendar = Calendar.getInstance()
+
+    val month = getTableNum(calendar.get(Calendar.MONTH))
+
+    calendar.setTime(new Date(long))
+
+    if(month == getTableNum(calendar.get(Calendar.MONTH))) false
+    else true
   }
 }
