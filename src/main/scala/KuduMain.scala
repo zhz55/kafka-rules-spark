@@ -54,108 +54,7 @@ object KuduMain {
     stream.foreachRDD(rdd => {
       if(!rdd.isEmpty()) {
         val tableArray = positionRules.tableArray()
-/*
-        val noRepeatedRdd = rdd.filter(record => !{if(VehiclePosition.parseFrom(record.value()).accessCode
-          == positionRules.repeatFilter(record.partition())) false else true}).
-          map(record => {
-            val positionRecord = VehiclePosition.parseFrom(record.value())
-            TableStructureVehiclePosition(
-              positionRecord.vehicleNo.trim(), positionRecord.getPlateColor,
-              // Date->UnixTime
-              {
-                if ("^\\d{4}-\\d{1,2}-\\d{1,2}\\s\\d{1,2}:\\d{1,2}:\\d{1,2}$".r.pattern.matcher(positionRecord.gnss.positionTime).matches())
-                  new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").parse(positionRecord.gnss.positionTime).getTime / 1000
-                else 0
-              }, positionRecord.accessCode,
-              positionRecord.city, positionRecord.getCurAccessCode,
-              positionRecord.getTrans, positionRecord.updateTime,
-              positionRecord.gnss.getEncrypt, positionRecord.gnss.lon, positionRecord.gnss.lat,
-              positionRecord.gnss.getVec1, positionRecord.gnss.getVec2, positionRecord.gnss.getVec3,
-              positionRecord.gnss.getDirection, positionRecord.gnss.getAltitude,
-              positionRecord.gnss.getState, positionRecord.gnss.getAlarm,
-              positionRecord.getReserved, positionRules.positionJudge(positionRecord).toString, 0)
-          })
-        val errorRdd = noRepeatedRdd.filter(record => record.errorcode.contains("1"))
 
-
-        val correctRdd = rdd.filter(record => {
-          !positionRules.positionJudge(VehiclePosition.parseFrom(record.value())).toString.contains("1") &&
-            !{if(VehiclePosition.parseFrom(record.value()).accessCode
-              == positionRules.repeatFilter(record.partition())) false else true}}).
-          map(record => {
-            val positionRecord = VehiclePosition.parseFrom(record.value())
-            TableStructureVehiclePosition(
-              positionRecord.vehicleNo.trim(), positionRecord.getPlateColor,
-              // Date->UnixTime
-              new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").parse(positionRecord.gnss.positionTime).getTime / 1000, positionRecord.accessCode,
-              positionRecord.city, positionRecord.getCurAccessCode,
-              positionRecord.getTrans, positionRecord.updateTime,
-              positionRecord.gnss.getEncrypt, positionRecord.gnss.lon, positionRecord.gnss.lat,
-              positionRecord.gnss.getVec1, positionRecord.gnss.getVec2, positionRecord.gnss.getVec3,
-              positionRecord.gnss.getDirection, positionRecord.gnss.getAltitude,
-              positionRecord.gnss.getState, positionRecord.gnss.getAlarm,
-              positionRecord.getReserved, positionRules.positionJudge(positionRecord).toString, 0)
-          })
-
-        val correctNowRdd = correctRdd.filter(record => {
-          !positionRules.correctCrossTableFlag(record.positiontime * 1000)
-        })
-
-        val correctAcrossRdd = correctRdd.filter(record => {
-          positionRules.correctCrossTableFlag(record.positiontime * 1000)
-        })
-
-        val correctNowRdd = noRepeatedRdd.filter(record => {
-          !record.errorcode.contains("1") &&
-          !positionRules.correctCrossTableFlag(record.positiontime * 1000)
-        })
-
-        val correctAcrossRdd = noRepeatedRdd.filter(record => {
-          !record.errorcode.contains("1") &&
-          positionRules.correctCrossTableFlag(record.positiontime * 1000)
-        })
-
-        val errorRdd = rdd.filter(record => {
-          positionRules.positionJudge(VehiclePosition.parseFrom(record.value())).toString.contains("1") &&
-            !{if(VehiclePosition.parseFrom(record.value()).accessCode
-              == positionRules.repeatFilter(record.partition())) false else true}}).
-          map(record => {
-            val positionRecord = VehiclePosition.parseFrom(record.value())
-            TableStructureVehiclePosition(
-              positionRecord.vehicleNo.trim(), positionRecord.getPlateColor,
-              // Date->UnixTime
-              {
-                if ("^\\d{4}-\\d{1,2}-\\d{1,2}\\s\\d{1,2}:\\d{1,2}:\\d{1,2}$".r.pattern.matcher(positionRecord.gnss.positionTime).matches())
-                  new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").parse(positionRecord.gnss.positionTime).getTime / 1000
-                else 0
-              }, positionRecord.accessCode,
-              positionRecord.city, positionRecord.getCurAccessCode,
-              positionRecord.getTrans, positionRecord.updateTime,
-              positionRecord.gnss.getEncrypt, positionRecord.gnss.lon, positionRecord.gnss.lat,
-              positionRecord.gnss.getVec1, positionRecord.gnss.getVec2, positionRecord.gnss.getVec3,
-              positionRecord.gnss.getDirection, positionRecord.gnss.getAltitude,
-              positionRecord.gnss.getState, positionRecord.gnss.getAlarm,
-              positionRecord.getReserved, positionRules.positionJudge(positionRecord).toString, 0)
-          })
-
-        val errorNowRdd = errorRdd.filter(record => {
-          !positionRules.errorCrossTableFlag(record.positiontime * 1000)
-        })
-
-        val errorAcrossRdd = errorRdd.filter(record => {
-          positionRules.errorCrossTableFlag(record.positiontime * 1000)
-        })
-
-        val errorNowRdd = noRepeatedRdd.filter(record => {
-          record.errorcode.contains("1") &&
-          !positionRules.errorCrossTableFlag(record.positiontime * 1000)
-        })
-
-        val errorAcrossRdd = noRepeatedRdd.filter(record => {
-          record.errorcode.contains("1") &&
-          positionRules.errorCrossTableFlag(record.positiontime * 1000)
-        })
-*/
         val sparkSession = SparkSession.builder().config(rdd.sparkContext.getConf).getOrCreate()
         import sparkSession.implicits._
 
@@ -183,27 +82,14 @@ object KuduMain {
 
           kuduContext.insertIgnoreRows(
             noRepeatedRdd.filter(record => {
-              !record.errorcode.contains("1") &&
-                !positionRules.correctCrossTableFlag(record.positiontime * 1000)
+                !positionRules.crossTableFlag(record.positiontime * 1000)
             }).toDF(), tableArray(0))
 
           kuduContext.insertIgnoreRows(
             noRepeatedRdd.filter(record => {
-              record.errorcode.contains("1") &&
-                !positionRules.errorCrossTableFlag(record.positiontime * 1000)
+                positionRules.crossTableFlag(record.positiontime * 1000)
             }).toDF(), tableArray(1))
 
-          kuduContext.insertIgnoreRows(
-            noRepeatedRdd.filter(record => {
-              !record.errorcode.contains("1") &&
-                positionRules.correctCrossTableFlag(record.positiontime * 1000)
-            }).toDF(), tableArray(2))
-
-          kuduContext.insertIgnoreRows(
-            noRepeatedRdd.filter(record => {
-              record.errorcode.contains("1") &&
-                positionRules.errorCrossTableFlag(record.positiontime * 1000)
-            }).toDF(), tableArray(3))
         } catch {
           case e:Exception => {println("insert kudu error")}
           case e:ParseException => {println("time parse error")}

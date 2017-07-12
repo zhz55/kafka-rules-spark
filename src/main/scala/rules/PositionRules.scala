@@ -176,12 +176,9 @@ class PositionRules() extends Serializable{
   }
 
   def tableArray() : Array[String] = {
-    //"impala::position.CTTIC_VehiclePosition_201707_err_test"
-    // tableArray[0] : correctNowTableName
-    // tableArray[1] : errNowTableName
-    // tableArray[2] : correctAcrossTableName
-    // tableArray[3] : errorAcrossTableName
-    val tableArray = new Array[String](4)
+    // tableArray[0] : nowTableName
+    // tableArray[1] : acrossTableName
+    val tableArray = new Array[String](2)
 
     val now = Calendar.getInstance()
 
@@ -194,27 +191,22 @@ class PositionRules() extends Serializable{
 
     tableArray(0) = "impala::position.CTTIC_VehiclePosition_" + now.get(Calendar.YEAR).toString +
       monthAddZero(now.get(Calendar.MONTH) + 1) + "_" + tableNum.toString + "_test"
-    tableArray(1) = "impala::position.CTTIC_VehiclePosition_" + now.get(Calendar.YEAR).toString +
-      monthAddZero(now.get(Calendar.MONTH) + 1) + "_err_test"
 
     // across table
     // across month
     if(tableNum == 1) {
       now.add(Calendar.MONTH, -1)
-      tableArray(2) = "impala::position.CTTIC_VehiclePosition_" + now.get(Calendar.YEAR).toString +
+      tableArray(1) = "impala::position.CTTIC_VehiclePosition_" + now.get(Calendar.YEAR).toString +
         monthAddZero(now.get(Calendar.MONTH) + 1) + "_4_test"
-      tableArray(3) = "impala::position.CTTIC_VehiclePosition_" + now.get(Calendar.YEAR).toString +
-        monthAddZero(now.get(Calendar.MONTH) + 1) + "_err_test"
     } else {
-      tableArray(2) = "impala::position.CTTIC_VehiclePosition_" + now.get(Calendar.YEAR).toString +
+      tableArray(1) = "impala::position.CTTIC_VehiclePosition_" + now.get(Calendar.YEAR).toString +
         monthAddZero(now.get(Calendar.MONTH) + 1) + "_" + (tableNum - 1).toString + "_test"
-      tableArray(3) = tableArray(1)
     }
 
     tableArray
   }
 
-  def correctCrossTableFlag(long: Long) : Boolean = {
+  def crossTableFlag(long: Long) : Boolean = {
     val calendar = Calendar.getInstance()
 
     val tableNum = getTableNum(calendar.get(Calendar.DAY_OF_MONTH))
@@ -222,17 +214,6 @@ class PositionRules() extends Serializable{
     calendar.setTime(new Date(long))
 
     if(tableNum == getTableNum(calendar.get(Calendar.DAY_OF_MONTH))) false
-    else true
-  }
-
-  def errorCrossTableFlag(long: Long) : Boolean = {
-    val calendar = Calendar.getInstance()
-
-    val month = getTableNum(calendar.get(Calendar.MONTH))
-
-    calendar.setTime(new Date(long))
-
-    if(month == getTableNum(calendar.get(Calendar.MONTH))) false
     else true
   }
 }
