@@ -53,7 +53,7 @@ object KuduMain {
     val sparkSession = SparkSession.builder().config(conf).getOrCreate()
     import sparkSession.implicits._
 
-
+kuduContext.destroy()
     stream.foreachRDD(rdd => {
       if(!rdd.isEmpty()) {
         val tableArray = positionRules.tableArray()
@@ -92,6 +92,8 @@ object KuduMain {
             noRepeatedRdd.filter(record => {
                 positionRules.crossTableFlag(record.positiontime * 1000)
             }).toDF(), tableArray(1))
+
+
 
         } catch {
           case e:Exception => {println("insert kudu error")}
