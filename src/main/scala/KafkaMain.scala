@@ -15,7 +15,7 @@ import rules.PositionRules
 object KafkaMain {
 
   def main(args: Array[String]): Unit = {
-    val conf = new SparkConf().setAppName("KafkaTest").setMaster("yarn")
+    val conf = new SparkConf().setAppName("InsertKudu").setMaster("yarn")
     val ssc = new StreamingContext(conf, Seconds(10))
 
     val kafkaParams = Map[String, Object](

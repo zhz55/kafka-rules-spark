@@ -28,14 +28,14 @@ object KuduMain {
                                            roadcode : Int)
 
   def main(args: Array[String]): Unit = {
-    val conf = new SparkConf().setAppName("KafkaTest").setMaster("yarn")
-    val ssc = new StreamingContext(conf, Seconds(10))
+    val conf = new SparkConf().setAppName("InsertKudu").setMaster("yarn")
+    val ssc = new StreamingContext(conf, Seconds(args(0).toLong))
 
     val kafkaParams = Map[String, Object](
       "bootstrap.servers" -> "kf01:9092,kf02:9092,kf03:9092,kf04:9092,kf05:9092",
       "key.deserializer" -> classOf[StringDeserializer],
       "value.deserializer" -> classOf[org.apache.kafka.common.serialization.ByteArrayDeserializer],
-      "group.id" -> "scala_kafka_test",
+      "group.id" -> "kafka_insert_kudu",
       "auto.offset.reset" -> "latest",
       "enable.auto.commit" -> (false: java.lang.Boolean)
     )
