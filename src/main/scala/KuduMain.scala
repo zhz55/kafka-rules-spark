@@ -49,14 +49,17 @@ object KuduMain {
 
     val positionRules = new PositionRules
 
-    val kuduContext = new KuduContext("nn01")
+    val kuduContext = ssc.sparkContext.broadcast(new KuduContext("nn01"))
+    val sparkSession = SparkSession.builder().config(conf).getOrCreate()
+    import sparkSession.implicits._
+
 
     stream.foreachRDD(rdd => {
       if(!rdd.isEmpty()) {
         val tableArray = positionRules.tableArray()
 
-        val sparkSession = SparkSession.builder().config(rdd.sparkContext.getConf).getOrCreate()
-        import sparkSession.implicits._
+        //val sparkSession = SparkSession.builder().config(rdd.sparkContext.getConf).getOrCreate()
+        //import sparkSession.implicits._
 
         try {
           val noRepeatedRdd = rdd.filter(record => !{if(VehiclePosition.parseFrom(record.value()).accessCode
@@ -80,12 +83,12 @@ object KuduMain {
                 positionRecord.getReserved, positionRules.positionJudge(positionRecord).toString, 0)
             })
 
-          kuduContext.insertIgnoreRows(
+          kuduContext.value.insertIgnoreRows(
             noRepeatedRdd.filter(record => {
                 !positionRules.crossTableFlag(record.positiontime * 1000)
             }).toDF(), tableArray(0))
 
-          kuduContext.insertIgnoreRows(
+          kuduContext.value.insertIgnoreRows(
             noRepeatedRdd.filter(record => {
                 positionRules.crossTableFlag(record.positiontime * 1000)
             }).toDF(), tableArray(1))
