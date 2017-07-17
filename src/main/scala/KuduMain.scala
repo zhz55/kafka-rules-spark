@@ -1,6 +1,7 @@
 import java.text.{ParseException, SimpleDateFormat}
 
 import ctitc.seagoing.SEAGOING.VehiclePosition
+import org.apache.kafka.clients.consumer.ConsumerRecord
 import org.apache.kafka.common.serialization.StringDeserializer
 import org.apache.spark.SparkConf
 import org.apache.spark.sql.SparkSession
@@ -9,7 +10,8 @@ import org.apache.spark.streaming.kafka010.ConsumerStrategies.Subscribe
 import org.apache.spark.streaming.kafka010.KafkaUtils
 import org.apache.spark.streaming.kafka010.LocationStrategies.PreferConsistent
 import org.apache.kudu.spark.kudu._
-import rules.PositionRules
+import org.apache.spark.streaming.dstream.InputDStream
+import rules._
 
 /**
   * Created by Kasim on 2017/7/7.
@@ -40,26 +42,48 @@ object KuduMain {
       "enable.auto.commit" -> (false: java.lang.Boolean)
     )
 
+    def kafkaStream(ssc: StreamingContext, kafkaParams: Map[String, Object], offsetsStore: OffsetsStore, topic: String) :
+    InputDStream[ConsumerRecord[String, Array[Byte]]] = {
+      val topics = Set(topic)
+
+      val storedOffsets = offsetsStore.readOffsets(topic)
+
+      val kafkaStream = storedOffsets match {
+        case None =>
+          // start from the latest offsets
+          KafkaUtils.createDirectStream[String, Array[Byte]](
+            ssc,
+            PreferConsistent,
+            Subscribe[String, Array[Byte]](topics, kafkaParams))
+        case Some(fromOffsets) =>
+          // start from previously saved offsets
+          KafkaUtils.createDirectStream[String, Array[Byte]](
+            ssc,
+            PreferConsistent,
+            Subscribe[String, Array[Byte]](topics, kafkaParams, fromOffsets))
+      }
+
+      // save the offsets
+      kafkaStream.foreachRDD(rdd => offsetsStore.saveOffsets(topic, rdd))
+
+      kafkaStream
+    }
+
     val topics = Array("HYPT_POSITION","LWLK_POSITION")
-    val stream = KafkaUtils.createDirectStream[String, Array[Byte]](
-      ssc,
-      PreferConsistent,
-      Subscribe[String, Array[Byte]](topics, kafkaParams)
-    )
+    val zkHosts = "dn01:2181,dn02:2181,dn03:2181,dn04:2181,dn05:2181"
+    val zkPaths = Array("/INSERT_KUDU/HYPT", "/INSERT_KUDU/LWLK")
+
+    val hyptStream = kafkaStream(ssc, kafkaParams, new ZooKeeperOffsetsStore(zkHosts, zkPaths(0)), topics(0))
+    val lwlkStream = kafkaStream(ssc, kafkaParams, new ZooKeeperOffsetsStore(zkHosts, zkPaths(1)), topics(1))
 
     val positionRules = new PositionRules
 
     val kuduContext = ssc.sparkContext.broadcast(new KuduContext("nn01"))
     val sparkSession = SparkSession.builder().config(conf).getOrCreate()
     import sparkSession.implicits._
-
-kuduContext.destroy()
-    stream.foreachRDD(rdd => {
+    hyptStream.union(lwlkStream).foreachRDD(rdd => {
       if(!rdd.isEmpty()) {
         val tableArray = positionRules.tableArray()
-
-        //val sparkSession = SparkSession.builder().config(rdd.sparkContext.getConf).getOrCreate()
-        //import sparkSession.implicits._
 
         try {
           val noRepeatedRdd = rdd.filter(record => !{if(VehiclePosition.parseFrom(record.value()).accessCode
