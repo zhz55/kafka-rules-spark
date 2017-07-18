@@ -1,6 +1,5 @@
 import java.text.{ParseException, SimpleDateFormat}
 
-import KuduMain.TableStructureVehiclePosition
 import ctitc.seagoing.SEAGOING.VehiclePosition
 import org.apache.kafka.clients.consumer.ConsumerRecord
 import org.apache.kafka.common.serialization.StringDeserializer
@@ -41,49 +40,21 @@ object WriteHDFS {
       "enable.auto.commit" -> (false: java.lang.Boolean)
     )
 
-    def kafkaStream(ssc: StreamingContext, kafkaParams: Map[String, Object], offsetsStore: OffsetsStore, topic: String) :
-    InputDStream[ConsumerRecord[String, Array[Byte]]] = {
-      val topics = Set(topic)
-
-      val storedOffsets = offsetsStore.readOffsets(topic)
-
-      val kafkaStream = storedOffsets match {
-        case None =>
-          // start from the latest offsets
-          KafkaUtils.createDirectStream[String, Array[Byte]](
-            ssc,
-            PreferConsistent,
-            Subscribe[String, Array[Byte]](topics, kafkaParams))
-        case Some(fromOffsets) =>
-          // start from previously saved offsets
-          KafkaUtils.createDirectStream[String, Array[Byte]](
-            ssc,
-            PreferConsistent,
-            Subscribe[String, Array[Byte]](topics, kafkaParams, fromOffsets))
-      }
-
-      // save the offsets
-      kafkaStream.foreachRDD(rdd => offsetsStore.saveOffsets(topic, rdd))
-
-      kafkaStream
-    }
-
     val topics = Array("HYPT_POSITION","LWLK_POSITION")
-    val zkHosts = "dn01:2181,dn02:2181,dn03:2181,dn04:2181,dn05:2181"
-    val zkPaths = Array("/WRITE_HDFS/HYPT", "/WRITE_HDFS/LWLK")
 
     val positionRules = new PositionRules
 
-    val stream = kafkaStream(ssc, kafkaParams, new ZooKeeperOffsetsStore(zkHosts, zkPaths(0)), topics(0))
-      .union(kafkaStream(ssc, kafkaParams, new ZooKeeperOffsetsStore(zkHosts, zkPaths(1)), topics(1)))
+    val stream = KafkaUtils.createDirectStream[String, Array[Byte]](
+      ssc,
+      PreferConsistent,
+      Subscribe[String, Array[Byte]](topics, kafkaParams)
+    )
 
     val sparkSession = SparkSession.builder().config(conf).getOrCreate()
     import sparkSession.implicits._
     stream.foreachRDD(rdd => {
       val hDFSArray = positionRules.hDFSArray()
       try {
-        
-
         val noRepeatedRdd = rdd.filter(record => !{if(VehiclePosition.parseFrom(record.value()).accessCode
           == positionRules.repeatFilter(record.partition())) false else true}).
           map(record => {
@@ -112,8 +83,6 @@ object WriteHDFS {
           noRepeatedRdd.filter(record => {
             positionRules.crossTableFlag(record.positiontime * 1000)
           }).toDF().write.mode("Append").parquet("hdfs://nameservice1/VP/" + hDFSArray(1))
-
-
 
       } catch {
         case e:Exception => {println("write hdfs error")}
