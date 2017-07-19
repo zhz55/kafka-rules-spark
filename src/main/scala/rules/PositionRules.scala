@@ -206,35 +206,28 @@ class PositionRules() extends Serializable{
     tableArray
   }
 
-  def hDFSArray() : Array[String] = {
-    // hdfsArray[0] : nowFileName
-    // hdfsArray[1] : acrossFileName
-    val tableArray = new Array[String](2)
+  def hDFSTable() : String = {
 
     val now = Calendar.getInstance()
-
-    val tableNum = getTableNum(now.get(Calendar.DAY_OF_MONTH))
 
     def monthAddZero(int: Int) : String = {
       if(int < 10) "0" + int.toString
       else int.toString
     }
 
-    tableArray(0) = "VehiclePosition_" + now.get(Calendar.YEAR).toString +
-      monthAddZero(now.get(Calendar.MONTH) + 1) + "_" + tableNum.toString + "_test"
-
-    // across table
-    // across month
-    if(tableNum == 1) {
-      now.add(Calendar.MONTH, -1)
-      tableArray(1) = "VehiclePosition_" + now.get(Calendar.YEAR).toString +
-        monthAddZero(now.get(Calendar.MONTH) + 1) + "_4_test"
-    } else {
-      tableArray(1) = "VehiclePosition_" + now.get(Calendar.YEAR).toString +
-        monthAddZero(now.get(Calendar.MONTH) + 1) + "_" + (tableNum - 1).toString + "_test"
+    def dayAddZero(int: Int) : String = {
+      if(int < 10) "0" + int.toString
+      else int.toString
     }
 
-    tableArray
+    def hourAddZero(int: Int) : String = {
+      if(int < 10) "0" + int.toString
+      else int.toString
+    }
+
+    "VehiclePosition_" + now.get(Calendar.YEAR).toString + "_test" + "/" +
+      monthAddZero(now.get(Calendar.MONTH) + 1) + "/" + dayAddZero(now.get(Calendar.DAY_OF_MONTH)) + "/" +
+      hourAddZero(now.get(Calendar.HOUR_OF_DAY)) + "/"
   }
 
   def crossTableFlag(long: Long) : Boolean = {
