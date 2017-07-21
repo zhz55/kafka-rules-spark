@@ -104,11 +104,13 @@ object KuduMain {
   }
 
   def main(args: Array[String]): Unit = {
-    val ssc = StreamingContext.getActiveOrCreate(() => toCreateStreamingContext(args))
-    while(true) {
-      ssc.start()
-      ssc.awaitTerminationOrTimeout(60000)
-    }
-    //ssc.awaitTermination()
+
+    val ssc = StreamingContext.getOrCreate(path, () => toCreateStreamingContext(args))
+
+    ssc.start()
+
+    ssc.awaitTermination()
+
+    ssc.stop(stopSparkContext = true, stopGracefully = true)
   }
 }

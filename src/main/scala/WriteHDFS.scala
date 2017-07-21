@@ -4,6 +4,7 @@ import ctitc.seagoing.SEAGOING.VehiclePosition
 import org.apache.kafka.common.serialization.StringDeserializer
 import org.apache.spark.SparkConf
 import org.apache.spark.sql.SparkSession
+import org.apache.spark.streaming.dstream.InputDStream
 import org.apache.spark.streaming.kafka010.ConsumerStrategies.Subscribe
 import org.apache.spark.streaming.kafka010.KafkaUtils
 import org.apache.spark.streaming.kafka010.LocationStrategies.PreferConsistent
@@ -30,7 +31,7 @@ object WriteHDFS {
 
   def toCreateStreamingContext(args : Array[String]) : StreamingContext = {
     val conf = new SparkConf().setAppName("WriteHDFS").setMaster("yarn")
-    val ssc = new StreamingContext(conf, Seconds(if(args.length == 1) args(0).toLong else 10l))
+    val ssc = new StreamingContext(conf, Seconds(if(args.length > 1) args(0).toLong else 10l))
 
     val kafkaParams = Map[String, Object](
       "bootstrap.servers" -> "kf01:9092,kf02:9092,kf03:9092,kf04:9092,kf05:9092",
@@ -92,10 +93,16 @@ object WriteHDFS {
   }
 
   def main(args: Array[String]): Unit = {
-    val ssc = StreamingContext.getActiveOrCreate(() => toCreateStreamingContext(args))
-    ssc.start()
-    ssc.awaitTermination()
 
+    while(true) {
+      val ssc = StreamingContext.getOrCreate(path, () => toCreateStreamingContext(args))
+
+      ssc.start()
+
+      ssc.awaitTerminationOrTimeout((if(args.length > 1) args(1).toLong else 120l) * 1000l * 60l)
+
+      ssc.stop(stopSparkContext = true, stopGracefully = true)
+    }
   }
 
 }
