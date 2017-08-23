@@ -1,22 +1,22 @@
-/*
 import java.text.{ParseException, SimpleDateFormat}
 
 import ctitc.seagoing.SEAGOING.VehiclePosition
+import org.apache.kafka.clients.consumer.ConsumerRecord
 import org.apache.kafka.common.serialization.StringDeserializer
+import org.apache.kudu.spark.kudu._
 import org.apache.spark.SparkConf
 import org.apache.spark.sql.SparkSession
-import org.apache.spark.streaming.{Seconds, StreamingContext}
+import org.apache.spark.streaming.dstream.InputDStream
 import org.apache.spark.streaming.kafka010.ConsumerStrategies.Subscribe
 import org.apache.spark.streaming.kafka010.KafkaUtils
 import org.apache.spark.streaming.kafka010.LocationStrategies.PreferConsistent
-import org.apache.kudu.spark.kudu._
+import org.apache.spark.streaming.{Seconds, StreamingContext}
 import rules._
-*/
+
 /**
   * Created by Kasim on 2017/7/7.
-  *//*
-object KuduMain {
-  val path = "hdfs://nameservice1/checkpoint/insertkudu/"
+  */
+object KuduWithZKMain {
 
   case class TableStructureVehiclePosition(vehicleno : String, platecolor : Int,
                                            positiontime : Long, accesscode : Int,
@@ -29,9 +29,9 @@ object KuduMain {
                                            reserved : String, errorcode : String,
                                            roadcode : Int)
 
-  def toCreateStreamingContext(args : Array[String]) : StreamingContext = {
+  def main(args: Array[String]): Unit = {
     val conf = new SparkConf().setAppName("InsertKudu").setMaster("yarn")
-    val ssc = new StreamingContext(conf, Seconds(if(args.length == 1) args(0).toLong else 10l))
+    val ssc = new StreamingContext(conf, Seconds(args(0).toLong))
 
     val kafkaParams = Map[String, Object](
       "bootstrap.servers" -> "kf01:9092,kf02:9092,kf03:9092,kf04:9092,kf05:9092",
@@ -42,29 +42,51 @@ object KuduMain {
       "enable.auto.commit" -> (false: java.lang.Boolean)
     )
 
-    val topics = Array("HYPT_POSITION","LWLK_POSITION")
+    def kafkaStream(ssc: StreamingContext, kafkaParams: Map[String, Object], offsetsStore: OffsetsStore, topic: String) :
+    InputDStream[ConsumerRecord[String, Array[Byte]]] = {
+      val topics = Set(topic)
 
-    val stream = KafkaUtils.createDirectStream[String, Array[Byte]](
-      ssc,
-      PreferConsistent,
-      Subscribe[String, Array[Byte]](topics, kafkaParams)
-    )
+      val storedOffsets = offsetsStore.readOffsets(topic)
+
+      val kafkaStream = storedOffsets match {
+        case None =>
+          // start from the latest offsets
+          KafkaUtils.createDirectStream[String, Array[Byte]](
+            ssc,
+            PreferConsistent,
+            Subscribe[String, Array[Byte]](topics, kafkaParams))
+        case Some(fromOffsets) =>
+          // start from previously saved offsets
+          KafkaUtils.createDirectStream[String, Array[Byte]](
+            ssc,
+            PreferConsistent,
+            Subscribe[String, Array[Byte]](topics, kafkaParams, fromOffsets))
+      }
+
+      // save the offsets
+      kafkaStream.foreachRDD(rdd => offsetsStore.saveOffsets(topic, rdd))
+
+      kafkaStream
+    }
+
+    val topics = Array("HYPT_POSITION","LWLK_POSITION")
+    val zkHosts = "dn01:2181,dn02:2181,dn03:2181,dn04:2181,dn05:2181"
+    val zkPaths = Array("/INSERT_KUDU/HYPT", "/INSERT_KUDU/LWLK")
+
+    val hyptStream = kafkaStream(ssc, kafkaParams, new ZooKeeperOffsetsStore(zkHosts, zkPaths(0)), topics(0))
+    val lwlkStream = kafkaStream(ssc, kafkaParams, new ZooKeeperOffsetsStore(zkHosts, zkPaths(1)), topics(1))
 
     val positionRules = new PositionRules
 
     val kuduContext = ssc.sparkContext.broadcast(new KuduContext("nn01"))
     val sparkSession = SparkSession.builder().config(conf).getOrCreate()
     import sparkSession.implicits._
-    sparkSession.read.parquet()
-    stream.foreachRDD(rdd => {
+    hyptStream.union(lwlkStream).foreachRDD(rdd => {
       val tableArray = positionRules.tableArray()
 
       try {
-        val noRepeatedRdd = rdd.filter(record => !{
-          if(!record.value().isEmpty) {
-            if(VehiclePosition.parseFrom(record.value()).accessCode
-              == positionRules.repeatFilter(record.partition())) false else true
-          } else true}).
+        val noRepeatedRdd = rdd.filter(record => !{if(VehiclePosition.parseFrom(record.value()).accessCode
+          == positionRules.repeatFilter(record.partition())) false else true}).
           map(record => {
             val positionRecord = VehiclePosition.parseFrom(record.value())
             TableStructureVehiclePosition(
@@ -86,32 +108,24 @@ object KuduMain {
 
         kuduContext.value.insertIgnoreRows(
           noRepeatedRdd.filter(record => {
-            !positionRules.crossTableFlag(record.positiontime * 1000)
+              !positionRules.crossTableFlag(record.positiontime * 1000)
           }).toDF(), tableArray(0))
 
         kuduContext.value.insertIgnoreRows(
           noRepeatedRdd.filter(record => {
-            positionRules.crossTableFlag(record.positiontime * 1000)
+              positionRules.crossTableFlag(record.positiontime * 1000)
           }).toDF(), tableArray(1))
 
+
+
       } catch {
-        case e:Exception => {println(e.getMessage)}
+        case e:Exception => {println("insert kudu error")}
         case e:ParseException => {println("time parse error")}
       }
 
     })
-    ssc
-  }
-
-  def main(args: Array[String]): Unit = {
-
-    val ssc = StreamingContext.getOrCreate(path, () => toCreateStreamingContext(args))
 
     ssc.start()
-
     ssc.awaitTermination()
-
-    ssc.stop(stopSparkContext = true, stopGracefully = true)
   }
 }
-*/

@@ -1,15 +1,10 @@
 /**
   * Created by Kasim on 2017/7/5.
   */
-import org.apache.spark.SparkConf
-import org.apache.spark.streaming.Seconds
 import org.apache.kafka.common.serialization.StringDeserializer
-import org.apache.spark.streaming.StreamingContext
-import org.apache.spark.streaming.kafka010._
-import org.apache.spark.streaming.kafka010.LocationStrategies.PreferConsistent
 import org.apache.spark.streaming.kafka010.ConsumerStrategies.Subscribe
-
-import ctitc.seagoing.SEAGOING._
+import org.apache.spark.streaming.kafka010.LocationStrategies.PreferConsistent
+import org.apache.spark.streaming.kafka010._
 import rules.PositionRules
 
 object KafkaMain {

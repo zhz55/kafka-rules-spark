@@ -1,15 +1,13 @@
 import java.text.{ParseException, SimpleDateFormat}
 
-import ctitc.seagoing.SEAGOING.VehiclePosition
 import org.apache.kafka.common.serialization.StringDeserializer
 import org.apache.spark.SparkConf
 import org.apache.spark.sql.SparkSession
-import org.apache.spark.streaming.dstream.InputDStream
 import org.apache.spark.streaming.kafka010.ConsumerStrategies.Subscribe
 import org.apache.spark.streaming.kafka010.KafkaUtils
 import org.apache.spark.streaming.kafka010.LocationStrategies.PreferConsistent
 import org.apache.spark.streaming.{Seconds, StreamingContext}
-import rules.{OffsetsStore, PositionRules, ZooKeeperOffsetsStore}
+import rules.PositionRules
 
 /**
   * Created by Kasim on 2017/7/18.

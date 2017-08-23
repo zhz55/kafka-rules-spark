@@ -3,6 +3,7 @@ package rules
 /**
   * Created by Kasim on 2017/7/17.
   */
+/*
 import kafka.utils.{Logging, ZkUtils}
 import org.I0Itec.zkclient._
 import org.apache.kafka.common.TopicPartition
