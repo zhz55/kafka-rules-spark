@@ -56,11 +56,9 @@ object HighLevelKafkaIntoKudu {
       val tableArray = positionRules.tableArray()
       try {
         val noRepeatedRdd = rdd.
-          filter(record => !{
-            if(!record._2.isEmpty) {
-              if(VehiclePosition.parseFrom(record._2).accessCode
-                == ((VehiclePosition.parseFrom(record._2).curAccessCode.getOrElse(0)/10000)* 10000)) false else true
-            } else true}).
+          filter(record => {
+            !record._1.isEmpty && !record._2.isEmpty
+          }).
           map(record => {
             val positionRecord = VehiclePosition.parseFrom(record._2)
             TableStructureVehiclePosition(
