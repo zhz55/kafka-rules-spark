@@ -190,17 +190,17 @@ class PositionRules() extends Serializable{
     }
 
     tableArray(0) = "impala::position.CTTIC_VehiclePosition_" + now.get(Calendar.YEAR).toString +
-      monthAddZero(now.get(Calendar.MONTH) + 1) + "_" + tableNum.toString + "_test"
+      monthAddZero(now.get(Calendar.MONTH) + 1) + "_" + tableNum.toString
 
     // across table
     // across month
     if(tableNum == 1) {
       now.add(Calendar.MONTH, -1)
       tableArray(1) = "impala::position.CTTIC_VehiclePosition_" + now.get(Calendar.YEAR).toString +
-        monthAddZero(now.get(Calendar.MONTH) + 1) + "_4_test"
+        monthAddZero(now.get(Calendar.MONTH) + 1) + "_4"
     } else {
       tableArray(1) = "impala::position.CTTIC_VehiclePosition_" + now.get(Calendar.YEAR).toString +
-        monthAddZero(now.get(Calendar.MONTH) + 1) + "_" + (tableNum - 1).toString + "_test"
+        monthAddZero(now.get(Calendar.MONTH) + 1) + "_" + (tableNum - 1).toString
     }
 
     tableArray

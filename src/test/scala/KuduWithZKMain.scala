@@ -16,6 +16,9 @@ import rules._
 /**
   * Created by Kasim on 2017/7/7.
   */
+
+
+/*
 object KuduWithZKMain {
 
   case class TableStructureVehiclePosition(vehicleno : String, platecolor : Int,
@@ -129,3 +132,4 @@ object KuduWithZKMain {
     ssc.awaitTermination()
   }
 }
+*/

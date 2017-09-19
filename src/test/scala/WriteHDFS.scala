@@ -1,5 +1,6 @@
 import java.text.{ParseException, SimpleDateFormat}
 
+import ctitc.seagoing.SEAGOING.VehiclePosition
 import org.apache.kafka.common.serialization.StringDeserializer
 import org.apache.spark.SparkConf
 import org.apache.spark.sql.SparkSession

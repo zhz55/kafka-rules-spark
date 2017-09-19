@@ -1,5 +1,5 @@
-import org.apache.hadoop.hbase.HBaseConfiguration
-import org.apache.hadoop.mapred.JobConf
+//import org.apache.hadoop.hbase.HBaseConfiguration
+//import org.apache.hadoop.mapred.JobConf
 import org.apache.kafka.common.serialization.StringDeserializer
 import org.apache.spark.SparkConf
 import org.apache.spark.streaming.kafka010.ConsumerStrategies.Subscribe
@@ -10,6 +10,7 @@ import org.apache.spark.streaming.{Seconds, StreamingContext}
 /**
   * Created by Kasim on 2017/8/14.
   */
+/*
 object HBaseMain {
   def toCreateStreamingContext(args : Array[String]) : StreamingContext = {
     val conf = new SparkConf().setAppName("InsertKudu").setMaster("yarn")
@@ -44,3 +45,4 @@ object HBaseMain {
     ssc
   }
 }
+*/
