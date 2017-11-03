@@ -51,7 +51,7 @@ object KuduMain {
 
     val positionRules = new PositionRules
 
-    val kuduContext = ssc.sparkContext.broadcast(new KuduContext("nn01"))
+    val kuduContext = ssc.sparkContext.broadcast(new KuduContext("nn01",ssc.sparkContext))
     val sparkSession = SparkSession.builder().config(conf).getOrCreate()
     import sparkSession.implicits._
     stream.foreachRDD(rdd => {
