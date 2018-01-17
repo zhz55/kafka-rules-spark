@@ -1,4 +1,3 @@
-
 name := "kafka-rules-spark"
 
 version := "1.0"
@@ -10,7 +9,6 @@ mainClass := Option("KuduMain")
 libraryDependencies ++= Seq(
   "org.apache.spark" % "spark-streaming_2.11" % "2.1.1" % "provided",
   "org.apache.spark" % "spark-streaming-kafka-0-10_2.11" % "2.1.1" % "provided",
-  //"org.apache.spark" % "spark-streaming-kafka-0-8_2.11" % "2.1.1" % "provided",
   "org.apache.spark" % "spark-sql_2.11" % "2.1.1" % "provided",
   "org.apache.kudu" % "kudu-spark2_2.11" % "1.4.0"
 )

@@ -9,6 +9,7 @@ import org.apache.spark.streaming.kafka010.ConsumerStrategies.Subscribe
 import org.apache.spark.streaming.kafka010.KafkaUtils
 import org.apache.spark.streaming.kafka010.LocationStrategies.PreferConsistent
 import org.apache.kudu.spark.kudu._
+import org.apache.spark.storage.StorageLevel
 import rules._
 
 /**
@@ -51,13 +52,13 @@ object KuduMain {
 
     val positionRules = new PositionRules
 
-    val kuduContext = ssc.sparkContext.broadcast(new KuduContext("nn01",ssc.sparkContext))
+    //val kuduContext = ssc.sparkContext.broadcast(new KuduContext("nn01",ssc.sparkContext))
+    //val kuduContext = new KuduContext("nn01", ssc.sparkContext)
     val sparkSession = SparkSession.builder().config(conf).getOrCreate()
     import sparkSession.implicits._
     stream.foreachRDD(rdd => {
       val tableArray = positionRules.tableArray()
-
-      try {
+      try{
         val noRepeatedRdd = rdd.filter(record => !{
           if(!record.value().isEmpty) {
             if(VehiclePosition.parseFrom(record.value()).accessCode
@@ -81,22 +82,20 @@ object KuduMain {
               positionRecord.gnss.getState, positionRecord.gnss.getAlarm,
               positionRecord.getReserved, positionRules.positionJudge(positionRecord).toString, 0)
           })
-
-        kuduContext.value.insertIgnoreRows(
+        val kuduContext = new KuduContext("nn01", ssc.sparkContext)
+        kuduContext.insertIgnoreRows(
           noRepeatedRdd.filter(record => {
-            !positionRules.crossTableFlag(record.positiontime * 1000) && !record.errorcode.contains("1")
+            !positionRules.crossTableFlag(record.positiontime * 1000)
           }).toDF(), tableArray(0))
 
-        kuduContext.value.insertIgnoreRows(
+        kuduContext.insertIgnoreRows(
           noRepeatedRdd.filter(record => {
-            positionRules.crossTableFlag(record.positiontime * 1000) && !record.errorcode.contains("1")
+            positionRules.crossTableFlag(record.positiontime * 1000)
           }).toDF(), tableArray(1))
-
       } catch {
         case e:Exception => {println(e.getMessage)}
         case e:ParseException => {println("time parse error")}
       }
-
     })
     ssc
   }
